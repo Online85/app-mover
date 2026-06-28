@@ -24,121 +24,124 @@ class MainActivity : AppCompatActivity() {
     private lateinit var errorTextView: TextView
     private lateinit var statusTextView: TextView
 
-    // Код запроса разрешений
     private val PERMISSION_REQUEST_CODE = 100
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        try {
+            super.onCreate(savedInstanceState)
+            setContentView(R.layout.activity_main)
 
-        recyclerView = findViewById(R.id.recyclerView)
-        errorTextView = findViewById(R.id.errorTextView)
-        statusTextView = findViewById(R.id.statusTextView)
+            recyclerView = findViewById(R.id.recyclerView)
+            errorTextView = findViewById(R.id.errorTextView)
+            statusTextView = findViewById(R.id.statusTextView)
 
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        adapter = AppAdapter { appInfo ->
-            openAppSettings(appInfo.packageName)
+            recyclerView.layoutManager = LinearLayoutManager(this)
+            adapter = AppAdapter { appInfo ->
+                openAppSettings(appInfo.packageName)
+            }
+            recyclerView.adapter = adapter
+
+            // Показываем статус
+            statusTextView.text = "⏳ Инициализация..."
+            statusTextView.visibility = android.view.View.VISIBLE
+
+            // Запускаем проверку разрешений
+            checkAndRequestPermissions()
+
+        } catch (e: Exception) {
+            // Если ошибка в onCreate - показываем её
+            showError("Ошибка при запуске: ${e.message}\n${e.stackTraceToString()}")
         }
-        recyclerView.adapter = adapter
+    }
 
-        // Проверяем и запрашиваем разрешения
-        checkAndRequestPermissions()
+    private fun showError(message: String) {
+        try {
+            errorTextView.text = "❌ $message"
+            errorTextView.visibility = android.view.View.VISIBLE
+            statusTextView.visibility = android.view.View.GONE
+        } catch (e: Exception) {
+            // Если даже errorTextView не работает - показываем Toast
+            Toast.makeText(this, "Критическая ошибка: $message", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun checkAndRequestPermissions() {
-        val permissionsNeeded = mutableListOf<String>()
+        try {
+            val permissionsNeeded = mutableListOf<String>()
 
-        // Для Android 11+ (API 30+) нужно разрешение QUERY_ALL_PACKAGES
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // Это разрешение не запрашивается через диалог, оно указывается в манифесте
-            // Проверяем, есть ли у нас доступ к списку приложений
-            try {
-                val apps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-                if (apps.isEmpty()) {
-                    // Если список пуст, значит разрешение не дано
-                    statusTextView.text = "⚠️ Нет доступа к списку приложений. Перейдите в настройки и разрешите доступ."
-                    statusTextView.visibility = android.view.View.VISIBLE
+            // Для Android 6+ (API 23+) запрашиваем разрешения
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (ContextCompat.checkSelfPermission(
+                        this,
+                        Manifest.permission.READ_EXTERNAL_STORAGE
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    permissionsNeeded.add(Manifest.permission.READ_EXTERNAL_STORAGE)
                 }
-            } catch (e: Exception) {
-                statusTextView.text = "⚠️ Ошибка доступа: ${e.message}"
+
+                if (ContextCompat.checkSelfPermission(
+                        this,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    permissionsNeeded.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                }
+            }
+
+            if (permissionsNeeded.isNotEmpty()) {
+                statusTextView.text = "⏳ Запрашиваем разрешения..."
                 statusTextView.visibility = android.view.View.VISIBLE
-            }
-        }
-
-        // Для Android 6-10 (API 23-29) запрашиваем READ_EXTERNAL_STORAGE
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ContextCompat.checkSelfPermission(
+                ActivityCompat.requestPermissions(
                     this,
-                    Manifest.permission.READ_EXTERNAL_STORAGE
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                permissionsNeeded.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+                    permissionsNeeded.toTypedArray(),
+                    PERMISSION_REQUEST_CODE
+                )
+            } else {
+                statusTextView.text = "✅ Разрешения есть, загружаем приложения..."
+                statusTextView.visibility = android.view.View.VISIBLE
+                loadInstalledApps()
             }
 
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                permissionsNeeded.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-            }
-
-            // Для Android 8+ (API 26+) запрашиваем INSTALL_PACKAGES (необязательно, но может помочь)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                // Это разрешение тоже не запрашивается через диалог, только в манифесте
-            }
-        }
-
-        // Если есть разрешения, которые нужно запросить через диалог
-        if (permissionsNeeded.isNotEmpty()) {
-            statusTextView.text = "⏳ Запрашиваем разрешения..."
-            statusTextView.visibility = android.view.View.VISIBLE
-            ActivityCompat.requestPermissions(
-                this,
-                permissionsNeeded.toTypedArray(),
-                PERMISSION_REQUEST_CODE
-            )
-        } else {
-            // Разрешения уже есть или не требуются
-            statusTextView.text = "✅ Разрешения получены, загружаем приложения..."
-            statusTextView.visibility = android.view.View.VISIBLE
-            loadInstalledApps()
+        } catch (e: Exception) {
+            showError("Ошибка при проверке разрешений: ${e.message}")
         }
     }
 
-    // Обработка результата запроса разрешений
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        try {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            var allGranted = true
-            for (i in permissions.indices) {
-                if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
-                    allGranted = false
-                    statusTextView.text = "❌ Разрешение ${permissions[i]} не получено"
+            if (requestCode == PERMISSION_REQUEST_CODE) {
+                var allGranted = true
+                for (i in permissions.indices) {
+                    if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
+                        allGranted = false
+                        showError("Разрешение ${permissions[i]} не получено")
+                    }
+                }
+
+                if (allGranted) {
+                    statusTextView.text = "✅ Все разрешения получены"
                     statusTextView.visibility = android.view.View.VISIBLE
+                    loadInstalledApps()
+                } else {
+                    showError("Некоторые разрешения не получены. Перейдите в настройки и разрешите их вручную.")
                 }
             }
-
-            if (allGranted) {
-                statusTextView.text = "✅ Все разрешения получены"
-                statusTextView.visibility = android.view.View.VISIBLE
-                loadInstalledApps()
-            } else {
-                // Если разрешения не даны, предлагаем перейти в настройки
-                statusTextView.text = "⚠️ Некоторые разрешения не получены. Перейдите в настройки и разрешите их вручную."
-                statusTextView.visibility = android.view.View.VISIBLE
-                Toast.makeText(this, "Разрешите доступ в настройках приложения", Toast.LENGTH_LONG).show()
-            }
+        } catch (e: Exception) {
+            showError("Ошибка при обработке разрешений: ${e.message}")
         }
     }
 
     private fun loadInstalledApps() {
         try {
+            statusTextView.text = "⏳ Загрузка списка приложений..."
+            statusTextView.visibility = android.view.View.VISIBLE
+
             val pm = packageManager
             val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
 
@@ -147,7 +150,7 @@ class MainActivity : AppCompatActivity() {
 
             for (app in apps) {
                 try {
-                    // Пропускаем системные приложения (можно убрать, если хотите видеть все)
+                    // Пропускаем системные приложения
                     if ((app.flags and ApplicationInfo.FLAG_SYSTEM) != 0) continue
 
                     val isMoveable = (app.flags and ApplicationInfo.FLAG_EXTERNAL_STORAGE) != 0 ||
@@ -171,18 +174,16 @@ class MainActivity : AppCompatActivity() {
             appList.sortByDescending { it.isMoveable }
             adapter.submitList(appList)
 
-            // Показываем статус загрузки
             statusTextView.text = "📱 Загружено приложений: $count"
             statusTextView.visibility = android.view.View.VISIBLE
             errorTextView.visibility = android.view.View.GONE
 
         } catch (e: Exception) {
-            errorTextView.text = "❌ Ошибка загрузки: ${e.message}\n\n" +
+            showError("Ошибка загрузки приложений: ${e.message}\n\n" +
                     "Попробуйте:\n" +
                     "1. Перезапустить приложение\n" +
                     "2. Включить все разрешения в настройках\n" +
-                    "3. Включить режим разработчика"
-            errorTextView.visibility = android.view.View.VISIBLE
+                    "3. Включить режим разработчика")
             e.printStackTrace()
         }
     }
