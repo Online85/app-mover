@@ -21,16 +21,11 @@ jobs:
     
     - name: Download Gradle Wrapper files
       run: |
-        # Скачиваем gradlew
         wget -O gradlew https://raw.githubusercontent.com/gradle/gradle/v8.0.0/gradlew
         wget -O gradlew.bat https://raw.githubusercontent.com/gradle/gradle/v8.0.0/gradlew.bat
-        # Создаем папку
         mkdir -p gradle/wrapper
-        # Скачиваем gradle-wrapper.jar (ЭТОТ ШАГ!)
         wget -O gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v8.0.0/gradle/wrapper/gradle-wrapper.jar
-        # Скачиваем properties
         wget -O gradle/wrapper/gradle-wrapper.properties https://raw.githubusercontent.com/gradle/gradle/v8.0.0/gradle/wrapper/gradle-wrapper.properties
-        # Даем права
         chmod +x gradlew
     
     - name: Build APK
@@ -41,5 +36,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
-        path: app/build/outputs/apk/debug/*.apk
+        path: .github/workflows/app/build/outputs/apk/debug/*.apk   # ← ИЗМЕНЁННЫЙ ПУТЬ
         retention-days: 30
