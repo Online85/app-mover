@@ -5,6 +5,18 @@
     android:orientation="vertical"
     android:padding="8dp">
 
+    <!-- СТАТУСНАЯ СТРОКА (добавлена) -->
+    <TextView
+        android:id="@+id/statusTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp"
+        android:text="⏳ Проверка разрешений..."
+        android:textColor="#2196F3"
+        android:textSize="14sp"
+        android:visibility="visible" />
+
+    <!-- СТРОКА ДЛЯ ОШИБОК -->
     <TextView
         android:id="@+id/errorTextView"
         android:layout_width="match_parent"
@@ -12,19 +24,22 @@
         android:padding="12dp"
         android:text=""
         android:textColor="#D32F2F"
-        android:visibility="gone"
-        android:textSize="14sp" />
+        android:textSize="14sp"
+        android:visibility="gone" />
 
+    <!-- ОПИСАНИЕ -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="12dp"
-        android:text="Нажмите на приложение, чтобы открыть настройки"
+        android:text="📱 Нажмите на приложение, чтобы открыть настройки"
         android:textSize="14sp"
         android:textColor="#666" />
 
+    <!-- СПИСОК ПРИЛОЖЕНИЙ -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
+
 </LinearLayout>
