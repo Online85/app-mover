@@ -6,6 +6,16 @@
     android:padding="8dp">
 
     <TextView
+        android:id="@+id/errorTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp"
+        android:text=""
+        android:textColor="#D32F2F"
+        android:visibility="gone"
+        android:textSize="14sp" />
+
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="12dp"
