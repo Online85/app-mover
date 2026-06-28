@@ -13,3 +13,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "AppMover"
 include ':app'
+project(':app').projectDir = file('.github/workflows/app')
